@@ -1,51 +1,67 @@
-import React, { useState } from 'react';
-
-const API_KEY = 'TVŮJ_USDA_API_KEY'; // vlož svůj USDA API klíč
-
-async function fetchNutrition(foodName) {
-  try {
-    const searchRes = await fetch(
-      `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(foodName)}&api_key=${API_KEY}`
-    );
-    const searchData = await searchRes.json();
-    if (!searchData.foods || searchData.foods.length === 0) return null;
-
-    const fdcId = searchData.foods[0].fdcId;
-    const detailRes = await fetch(
-      `https://api.nal.usda.gov/fdc/v1/food/${fdcId}?api_key=${API_KEY}`
-    );
-    const detailData = await detailRes.json();
-    return detailData;
-  } catch (err) {
-    console.error('USDA API error', err);
-    return null;
-  }
-}
+import React, { useState } from "react";
 
 function App() {
-  const [restaurants, setRestaurants] = useState([]);
-  const [newRestaurantName, setNewRestaurantName] = useState('');
-  const [searchDish, setSearchDish] = useState('');
-  const [dailyMenu, setDailyMenu] = useState([]);
-  const [nutritionInfo, setNutritionInfo] = useState({});
+  const [food, setFood] = useState("");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
 
-  const addRestaurant = () => {
-    if (!newRestaurantName) return;
-    setRestaurants([...restaurants, { name: newRestaurantName, menu: [] }]);
-    setNewRestaurantName('');
-  };
+  const searchFood = async () => {
+    if (!food) return;
 
-  const addDish = (index) => {
-    const dishName = prompt('Název jídla:');
-    const dishPrice = prompt('Cena jídla:');
-    if (dishName && dishPrice) {
-      const newRestaurants = [...restaurants];
-      newRestaurants[index].menu.push({ name: dishName, price: parseFloat(dishPrice) });
-      setRestaurants(newRestaurants);
+    try {
+      setError("");
+      setResult(null);
+
+      const response = await fetch(
+        `/api/usda?query=${encodeURIComponent(food)}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Chyba při načítání dat");
+      }
+
+      setResult(data);
+    } catch (err) {
+      setError(err.message);
     }
   };
 
-  const addToDailyMenu = (dish) => {
-    setDailyMenu([...dailyMenu, dish]);
+  return (
+    <div style={{ padding: "40px", fontFamily: "Arial" }}>
+      <h1>USDA Nutrition Search</h1>
+
+      <input
+        type="text"
+        value={food}
+        onChange={(e) => setFood(e.target.value)}
+        placeholder="Zadej potravinu (např. apple)"
+        style={{ padding: "8px", width: "300px" }}
+      />
+
+      <button
+        onClick={searchFood}
+        style={{ marginLeft: "10px", padding: "8px 16px" }}
+      >
+        Hledat
+      </button>
+
+      {error && (
+        <p style={{ color: "red", marginTop: "20px" }}>{error}</p>
+      )}
+
+      {result && (
+        <div style={{ marginTop: "20px" }}>
+          <h2>{result.description}</h2>
+          <p>Kalorie: {result.calories} kcal</p>
+          <p>Bílkoviny: {result.protein} g</p>
+          <p>Tuky: {result.fat} g</p>
+          <p>Sacharidy: {result.carbs} g</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default App;
