@@ -47,4 +47,5 @@ function App() {
 
   const addToDailyMenu = (dish) => {
     setDailyMenu([...dailyMenu, dish]);
+
 export default App;
